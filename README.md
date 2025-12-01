@@ -16,11 +16,17 @@ Clean and modular codebase
 
 CAF_Hybrid_Light/
 │
+
 ├── app.py                   # Flask app and prediction API
+
 ├── model_definition.py      # CAFHybridLight model architecture
+
 ├── CAFHybridLight_best.pth  # Trained model weights (not included)
+
 ├── templates/               # HTML templates for UI
+
 ├── static/                  # Static assets
+
 └── README.md                # Documentation
 
 # 🧠 Model Overview
