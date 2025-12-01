@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAF Hybrid Light | Fake Image Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <section class="hero">
+        <h1>CAF Hybrid Light</h1>
+        <p>Upload an image to check whether it appears authentic or fake.</p>
+      </section>
+
+      <section class="uploader">
+        <form id="upload-form">
+          <label for="image" class="dropzone">
+            <input
+              type="file"
+              id="image"
+              name="image"
+              accept=".jpg,.jpeg,.png,.bmp,.tiff,.webp"
+              required
+            />
+            <div class="instructions">
+              <strong>Click to choose</strong> or drag & drop an image here
+              <span>Supported types: JPG, PNG, BMP, TIFF, WEBP (max 10MB)</span>
+            </div>
+          </label>
+          <button type="submit">Analyze Image</button>
+        </form>
+
+        <div id="preview" class="hidden">
+          <img alt="Uploaded preview" />
+        </div>
+      </section>
+
+      <section id="result" class="hidden">
+        <h2>Result</h2>
+        <p class="summary"></p>
+        <div class="probabilities"></div>
+      </section>
+    </main>
+
+    <template id="probability-template">
+      <div class="probability-bar">
+        <span class="label"></span>
+        <div class="bar">
+          <div class="bar-fill"></div>
+        </div>
+        <span class="value"></span>
+      </div>
+    </template>
+
+    <script>
+      const form = document.getElementById("upload-form");
+      const resultSection = document.getElementById("result");
+      const resultSummary = resultSection.querySelector(".summary");
+      const probabilityContainer = resultSection.querySelector(".probabilities");
+      const probabilityTemplate = document.getElementById("probability-template");
+      const previewWrapper = document.getElementById("preview");
+      const previewImage = previewWrapper.querySelector("img");
+      const imageInput = document.getElementById("image");
+
+      imageInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+          previewWrapper.classList.add("hidden");
+          previewImage.src = "";
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = ({ target }) => {
+          previewImage.src = target.result;
+          previewWrapper.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const file = imageInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+          const response = await fetch("/predict", {
+            method: "POST",
+            body: formData,
+          });
+
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || "Unable to classify image.");
+          }
+
+          const { label, confidence, probabilities } = payload;
+          resultSummary.textContent = `${label} (${confidence}% confidence)`;
+          probabilityContainer.innerHTML = "";
+
+          Object.entries(probabilities).forEach(([name, value]) => {
+            const clone = probabilityTemplate.content.cloneNode(true);
+            clone.querySelector(".label").textContent = name;
+            clone.querySelector(".bar-fill").style.width = `${(value * 100).toFixed(1)}%`;
+            clone.querySelector(".value").textContent = `${(value * 100).toFixed(2)}%`;
+            probabilityContainer.appendChild(clone);
+          });
+
+          resultSection.classList.remove("hidden");
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+    </script>
+  </body>
+</html>
+
